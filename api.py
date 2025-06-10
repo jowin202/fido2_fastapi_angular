@@ -51,18 +51,6 @@ async def register_begin(request: Request):
 
 
 
-
-
-def base64url_to_bytes(data: str) -> bytes:
-    padding = '=' * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data + padding)
-
-def b64url_decode(data):
-    # Add padding if needed
-    data += '=' * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data)
-
-
 @app.post("/api/register/complete")
 async def register_complete(request: Request):
     body = await request.json()
@@ -78,7 +66,6 @@ async def register_complete(request: Request):
 
     # Save credential
     CREDENTIALS[username] = auth_data.credential_data
-    print(auth_data.credential_data, flush=True)
     return {"status": "ok"}
 
 
@@ -99,14 +86,8 @@ async def auth_begin(request: Request):
 
 
 
-
-
 def b64url_decode(val: str) -> bytes:
     return base64.urlsafe_b64decode(val + '=' * (-len(val) % 4))
-
-def b64url_encode(buf: bytes) -> str:
-    return base64.urlsafe_b64encode(buf).rstrip(b'=').decode('ascii')
-
 
 @app.post("/api/auth/complete")
 async def auth_complete(request: Request):
@@ -117,12 +98,11 @@ async def auth_complete(request: Request):
         raise HTTPException(status_code=400, detail="Invalid username")
 
     raw_id: bytes = b64url_decode(body["rawId"])
-    id_str: str = b64url_encode(raw_id)  # Ensure it's a string
 
     # Construct response object
     client_data = {
-        "id": id_str,                   # must be string!
-        "rawId": raw_id,                # must be bytes!
+        "id": websafe_decode(body["rawId"]),    # must be string!
+        "rawId": raw_id,                        # must be bytes!
         "type": body["type"],
         "response": {
             "clientDataJSON": b64url_decode(body["response"]["clientDataJSON"]),
@@ -135,8 +115,6 @@ async def auth_complete(request: Request):
             ),
         },
     }
-
-    client_data["id"] = websafe_decode(client_data["id"])
 
     auth_data = server.authenticate_complete(
         USERS[username]["auth_state"],
