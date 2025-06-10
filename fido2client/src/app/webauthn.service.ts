@@ -45,13 +45,12 @@ export class WebauthnService {
 
   async register(username: string): Promise<void> {
     // Step 1: Begin registration
-    const responseBlob = await firstValueFrom(
-      this.http.post('/api/register/begin', { username }, { responseType: 'blob' })
+    const responseBuffer = await firstValueFrom(
+      this.http.post('/api/register/begin', { username }, { responseType: 'arraybuffer' })
     );
 
     // Step 2: Decode CBOR response
-    const arrayBuffer = await responseBlob.arrayBuffer();
-    const decoded = await decodeFirst(arrayBuffer) as { publicKey: PublicKeyCredentialCreationOptions };
+    const decoded = await decodeFirst(responseBuffer) as { publicKey: PublicKeyCredentialCreationOptions };
     const publicKey = decoded.publicKey;
 
     // Step 3: Normalize fields
@@ -88,16 +87,6 @@ export class WebauthnService {
 
     console.log('Registration complete');
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -200,8 +189,5 @@ private bufferFrom(buf: unknown): ArrayBuffer {
     };
   }
 
-
-
-  
 
 }
