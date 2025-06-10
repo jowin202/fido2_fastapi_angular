@@ -1,14 +1,12 @@
 from fastapi import FastAPI, Request, HTTPException, Header
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
-from fido2.webauthn import AuthenticatorSelectionCriteria, UserVerificationRequirement, RegistrationResponse
+from fido2.webauthn import UserVerificationRequirement
 from fido2 import cbor
-from fido2.webauthn import CollectedClientData
 
 from fido2.utils import websafe_encode
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from fido2.client import AttestationObject
 from fido2.utils import websafe_decode
 
 
@@ -55,7 +53,6 @@ async def register_begin(request: Request):
 
 
 
-
 def base64url_to_bytes(data: str) -> bytes:
     padding = '=' * (-len(data) % 4)
     return base64.urlsafe_b64decode(data + padding)
@@ -77,13 +74,6 @@ async def register_complete(request: Request):
     if not user_entry:
         return {"error": "No registration in progress for this user"}
 
-    client_data_bytes = b64url_decode(credential["response"]["clientDataJSON"])
-    attestation_bytes = b64url_decode(credential["response"]["attestationObject"])
-
-    client_data = CollectedClientData(client_data_bytes)
-    att_obj = AttestationObject(attestation_bytes)
-
-    #auth_data = Fido2Server.register_complete(user_entry["state"], client_data, att_obj)
     auth_data = server.register_complete(user_entry["state"], credential)
 
     # Save credential
@@ -104,7 +94,6 @@ async def auth_begin(request: Request):
 
     auth_data, state = server.authenticate_begin([CREDENTIALS[username]])
     USERS[username]["auth_state"] = state
-    print(cbor.encode(auth_data),flush=True)
     return Response(content=cbor.encode(auth_data), media_type="application/cbor")
 
 
